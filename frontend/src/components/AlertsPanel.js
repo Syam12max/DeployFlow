@@ -9,12 +9,13 @@ function AlertsPanel() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
 
+  // Render backend URL
+  const API_URL = "https://deployflow-ezbz.onrender.com";
+
   useEffect(() => {
     async function fetchAlerts() {
       try {
-        const response = await fetch(
-          "http://localhost:5000/api/alerts"
-        );
+        const response = await fetch(`${API_URL}/api/alerts`);
 
         if (!response.ok) {
           throw new Error("Failed to load alerts");
@@ -66,7 +67,7 @@ function AlertsPanel() {
   async function resolveAlert(id) {
     try {
       const response = await fetch(
-        `http://localhost:5000/api/alerts/${encodeURIComponent(id)}/resolve`,
+        `${API_URL}/api/alerts/${encodeURIComponent(id)}/resolve`,
         { method: "PATCH" }
       );
 
