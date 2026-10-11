@@ -1,0 +1,26 @@
+[
+  {
+    "id": "1",
+    "application": "DeployFlow Frontend",
+    "environment": "Development",
+    "version": "v1.0.0",
+    "status": "Failed",
+    "date": "2026-10-10"
+  },
+  {
+    "id": "2",
+    "application": "DeployFlow Backend",
+    "environment": "Testing",
+    "version": "v1.0.1",
+    "status": "Running",
+    "date": "2026-10-10"
+  },
+  {
+    "id": "3",
+    "application": "Payment Service",
+    "environment": "Production",
+    "version": "v1.2.0",
+    "status": "Failed",
+    "date": "2026-10-09"
+  }
+]

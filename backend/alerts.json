@@ -1,0 +1,30 @@
+[
+  {
+    "id": "1",
+    "title": "Database Connection Failed",
+    "message": "Unable to connect to the database.",
+    "severity": "Critical",
+    "resolved": true
+  },
+  {
+    "id": "2",
+    "title": "API Response Time",
+    "message": "API response time is higher than expected.",
+    "severity": "Warning",
+    "resolved": true
+  },
+  {
+    "id": "3",
+    "title": "Deployment Completed",
+    "message": "Application deployed successfully.",
+    "severity": "Info",
+    "resolved": true
+  },
+  {
+    "id": "4",
+    "title": "Memory Usage High",
+    "message": "Memory usage is above the recommended level.",
+    "severity": "Warning",
+    "resolved": true
+  }
+]
