@@ -7,14 +7,39 @@ function LogsPanel() {
   const [logs, setLogs] = useState([]);
   const [searchText, setSearchText] = useState("");
 
-  const [selectedLevel, setSelectedLevel] = useState(() => {
-    return localStorage.getItem("deployflow-log-level") || "ALL";
-  });
+  const [selectedLevel, setSelectedLevel] = useState(
+    () => localStorage.getItem("deployflow-log-level") || "ALL"
+  );
 
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
 
-  // Fetch logs and refresh every 5 seconds
+  // Convert backend log levels into consistent frontend levels
+  function normalizeLevel(level) {
+    const value = String(level || "INFO").toUpperCase();
+
+    if (value === "WARNING" || value === "WARN") return "WARN";
+    if (value === "ERROR" || value === "CRITICAL") return "ERROR";
+    if (value === "INFO") return "INFO";
+
+    return value;
+  }
+
+  // Display the timestamp received from the backend
+  function getLogTime(log) {
+    const value = log.timestamp || log.time || log.createdAt;
+
+    if (!value) return "Time unavailable";
+
+    const date = new Date(value);
+
+    if (Number.isNaN(date.getTime())) {
+      return String(value);
+    }
+
+    return date.toLocaleString();
+  }
+
   useEffect(() => {
     let active = true;
 
@@ -23,7 +48,7 @@ function LogsPanel() {
         const response = await fetch(`${API_URL}/api/logs`);
 
         if (!response.ok) {
-          throw new Error("Failed to fetch logs");
+          throw new Error(`Request failed: ${response.status}`);
         }
 
         const data = await response.json();
@@ -39,14 +64,10 @@ function LogsPanel() {
       } catch (err) {
         if (!active) return;
 
-        setError(
-          "Unable to load logs. Check the backend connection."
-        );
+        setError("Unable to load logs. Please check the backend connection.");
         console.error("Logs API error:", err);
       } finally {
-        if (active) {
-          setLoading(false);
-        }
+        if (active) setLoading(false);
       }
     }
 
@@ -68,22 +89,22 @@ function LogsPanel() {
   }
 
   const filteredLogs = logs.filter((log) => {
-    const message = (log.message || "").toLowerCase();
-    const time = String(log.time || "");
+    const message = String(log.message || "").toLowerCase();
+    const time = getLogTime(log).toLowerCase();
     const search = searchText.toLowerCase();
+    const level = normalizeLevel(log.level);
 
     const matchesSearch =
-      message.toLowerCase().includes(search) ||
-      time.toLowerCase().includes(search);
+      message.includes(search) || time.includes(search);
 
     const matchesLevel =
-      selectedLevel === "ALL" || log.level === selectedLevel;
+      selectedLevel === "ALL" || level === selectedLevel;
 
     return matchesSearch && matchesLevel;
   });
 
-  const getLevelColor = (level) => {
-    switch (level) {
+  function getLevelColor(level) {
+    switch (normalizeLevel(level)) {
       case "ERROR":
         return "#ef4444";
       case "WARN":
@@ -93,7 +114,7 @@ function LogsPanel() {
       default:
         return "#ffffff";
     }
-  };
+  }
 
   return (
     <div className="logs-panel">
@@ -111,13 +132,10 @@ function LogsPanel() {
           type="text"
           placeholder="Search logs..."
           value={searchText}
-          onChange={(e) => setSearchText(e.target.value)}
+          onChange={(event) => setSearchText(event.target.value)}
         />
 
-        <select
-          value={selectedLevel}
-          onChange={handleLevelChange}
-        >
+        <select value={selectedLevel} onChange={handleLevelChange}>
           <option value="ALL">All Levels</option>
           <option value="INFO">Info</option>
           <option value="WARN">Warning</option>
@@ -130,17 +148,23 @@ function LogsPanel() {
 
         <span>
           Errors:{" "}
-          {filteredLogs.filter((log) => log.level === "ERROR").length}
+          {filteredLogs.filter(
+            (log) => normalizeLevel(log.level) === "ERROR"
+          ).length}
         </span>
 
         <span>
           Warnings:{" "}
-          {filteredLogs.filter((log) => log.level === "WARN").length}
+          {filteredLogs.filter(
+            (log) => normalizeLevel(log.level) === "WARN"
+          ).length}
         </span>
 
         <span>
           Info:{" "}
-          {filteredLogs.filter((log) => log.level === "INFO").length}
+          {filteredLogs.filter(
+            (log) => normalizeLevel(log.level) === "INFO"
+          ).length}
         </span>
       </div>
 
@@ -153,18 +177,23 @@ function LogsPanel() {
           {filteredLogs.length === 0 ? (
             <p>No matching logs found.</p>
           ) : (
-            filteredLogs.map((log) => (
-              <div className="log-item" key={log.id}>
-                <span className="log-time">{log.time}</span>
+            filteredLogs.map((log, index) => (
+              <div
+                className="log-item"
+                key={log.id ?? `${log.timestamp || log.time}-${index}`}
+              >
+                <span className="log-time">{getLogTime(log)}</span>
 
                 <span
                   className="log-level"
                   style={{ color: getLevelColor(log.level) }}
                 >
-                  {log.level}
+                  {normalizeLevel(log.level)}
                 </span>
 
-                <span className="log-message">{log.message}</span>
+                <span className="log-message">
+                  {log.message || "No message available"}
+                </span>
               </div>
             ))
           )}
