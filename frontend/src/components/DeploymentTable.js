@@ -1,4 +1,7 @@
+
 import React, { useEffect, useState } from "react";
+
+const API_URL = "https://deployflow-ezbz.onrender.com";
 
 function DeploymentTable({ deployments = [] }) {
   const [searchTerm, setSearchTerm] = useState("");
@@ -24,7 +27,7 @@ function DeploymentTable({ deployments = [] }) {
 
   async function updateDeploymentStatus(deployment) {
     const newStatus =
-      pendingStatuses[deployment.id] || deployment.status;
+      pendingStatuses[deployment.id] ?? deployment.status;
 
     if (newStatus === deployment.status) {
       alert("Please select a different status first.");
@@ -35,13 +38,16 @@ function DeploymentTable({ deployments = [] }) {
 
     try {
       const response = await fetch(
-        `http://localhost:5000/api/deployments/${deployment.id}/status`,
+        `${API_URL}/api/deployments/${encodeURIComponent(
+          deployment.id
+        )}/status`,
         {
           method: "PATCH",
           headers: {
             "Content-Type": "application/json",
           },
           body: JSON.stringify({ status: newStatus }),
+          cache: "no-store",
         }
       );
 
@@ -51,10 +57,16 @@ function DeploymentTable({ deployments = [] }) {
         throw new Error(result.message || "Status update failed");
       }
 
+      const savedStatus = result.deployment?.status;
+
+      if (!savedStatus) {
+        throw new Error("Updated status was not returned by the server");
+      }
+
       setLocalDeployments((previous) =>
         previous.map((item) =>
           String(item.id) === String(deployment.id)
-            ? { ...item, status: result.deployment.status }
+            ? { ...item, status: savedStatus }
             : item
         )
       );
@@ -67,6 +79,7 @@ function DeploymentTable({ deployments = [] }) {
 
       alert("Deployment status updated successfully!");
     } catch (error) {
+      console.error("Deployment status update error:", error);
       alert(`Could not update status: ${error.message}`);
     } finally {
       setUpdatingId(null);
@@ -104,6 +117,7 @@ function DeploymentTable({ deployments = [] }) {
       <div className="deployment-toolbar">
         <div className="deployment-search">
           <span aria-hidden="true">⌕</span>
+
           <input
             type="text"
             placeholder="Search applications..."
@@ -126,6 +140,7 @@ function DeploymentTable({ deployments = [] }) {
 
         <div className="deployment-status-filter">
           <label htmlFor="deployment-status-filter">Status</label>
+
           <select
             id="deployment-status-filter"
             value={statusFilter}
@@ -148,8 +163,10 @@ function DeploymentTable({ deployments = [] }) {
           <span className="deployment-empty-icon" aria-hidden="true">
             ⌕
           </span>
+
           <h4>No deployments found</h4>
           <p>Try changing your search term or status filter.</p>
+
           {(searchTerm || statusFilter !== "All") && (
             <button
               type="button"
@@ -181,10 +198,16 @@ function DeploymentTable({ deployments = [] }) {
                 <tr key={deployment.id}>
                   <td>
                     <div className="deployment-app-cell">
-                      <span className="deployment-app-icon" aria-hidden="true">
+                      <span
+                        className="deployment-app-icon"
+                        aria-hidden="true"
+                      >
                         ◈
                       </span>
-                      <span>{deployment.application || "Unnamed application"}</span>
+
+                      <span>
+                        {deployment.application || "Unnamed application"}
+                      </span>
                     </div>
                   </td>
 
@@ -218,8 +241,8 @@ function DeploymentTable({ deployments = [] }) {
                           deployment.application || "deployment"
                         }`}
                         value={
-                          pendingStatuses[deployment.id] ||
-                          deployment.status ||
+                          pendingStatuses[deployment.id] ??
+                          deployment.status ??
                           "Running"
                         }
                         onChange={(e) =>

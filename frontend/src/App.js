@@ -1,4 +1,3 @@
-
 import React, { useEffect, useState } from "react";
 import "./App.css";
 
@@ -15,7 +14,7 @@ const API_URL = "https://deployflow-ezbz.onrender.com";
 
 function App() {
   const [activePage, setActivePage] = useState(
-    localStorage.getItem("deployflow-active-page") || "Dashboard"
+    () => localStorage.getItem("deployflow-active-page") || "Dashboard"
   );
 
   const [deployments, setDeployments] = useState([]);
@@ -27,13 +26,20 @@ function App() {
     localStorage.setItem("deployflow-active-page", activePage);
   }, [activePage]);
 
-  // Fetch deployments every 5 seconds
+  // Fetch deployments without allowing overlapping requests
   useEffect(() => {
     let active = true;
+    let isFetching = false;
 
     const fetchDeployments = async () => {
+      if (!active || isFetching) return;
+
+      isFetching = true;
+
       try {
-        const response = await fetch(`${API_URL}/api/deployments`);
+        const response = await fetch(`${API_URL}/api/deployments`, {
+          cache: "no-store",
+        });
 
         if (!response.ok) {
           throw new Error("Failed to fetch deployments");
@@ -41,12 +47,14 @@ function App() {
 
         const data = await response.json();
 
-        if (!active) return;
+        if (!active || !Array.isArray(data)) return;
 
         setDeployments(data);
         setLastUpdated(new Date().toLocaleTimeString());
       } catch (error) {
         console.error("Deployments API error:", error);
+      } finally {
+        isFetching = false;
       }
     };
 
@@ -60,13 +68,20 @@ function App() {
     };
   }, []);
 
-  // Fetch alerts every 5 seconds
+  // Fetch alerts without allowing overlapping requests
   useEffect(() => {
     let active = true;
+    let isFetching = false;
 
     const fetchAlerts = async () => {
+      if (!active || isFetching) return;
+
+      isFetching = true;
+
       try {
-        const response = await fetch(`${API_URL}/api/alerts`);
+        const response = await fetch(`${API_URL}/api/alerts`, {
+          cache: "no-store",
+        });
 
         if (!response.ok) {
           throw new Error("Failed to fetch alerts");
@@ -74,11 +89,13 @@ function App() {
 
         const data = await response.json();
 
-        if (active) {
-          setAlerts(data);
-        }
+        if (!active || !Array.isArray(data)) return;
+
+        setAlerts(data);
       } catch (error) {
         console.error("Alerts API error:", error);
+      } finally {
+        isFetching = false;
       }
     };
 
@@ -115,7 +132,7 @@ function App() {
     },
   ];
 
-  // Calculate dashboard statistics
+  // Dashboard statistics
   const totalDeployments = deployments.length;
 
   const successfulDeployments = deployments.filter(
@@ -125,7 +142,10 @@ function App() {
   const successRate =
     totalDeployments === 0
       ? 0
-      : ((successfulDeployments / totalDeployments) * 100).toFixed(1);
+      : (
+          (successfulDeployments / totalDeployments) *
+          100
+        ).toFixed(1);
 
   const activeAlerts = alerts.filter(
     (alert) => alert.resolved !== true

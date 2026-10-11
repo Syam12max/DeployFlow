@@ -4,373 +4,247 @@ const fs = require("fs");
 const path = require("path");
 const si = require("systeminformation");
 
-const PORT = 5000;
+const PORT = process.env.PORT || 5000;
+
+const allowedOrigins = [
+  "https://deploy-flow-puce.vercel.app",
+  "http://localhost:3000",
+];
 
 const alertsFile = path.join(__dirname, "alerts.json");
 const deploymentsFile = path.join(__dirname, "deployments.json");
 
-// Default deployment data
-const defaultDeployments = [
-  {
-    id: "1",
-    application: "DeployFlow Frontend",
-    environment: "Development",
-    version: "v1.0.0",
-    status: "Success",
-    date: "2026-10-10",
-  },
-  {
-    id: "2",
-    application: "DeployFlow Backend",
-    environment: "Testing",
-    version: "v1.0.1",
-    status: "Running",
-    date: "2026-10-10",
-  },
-  {
-    id: "3",
-    application: "Payment Service",
-    environment: "Production",
-    version: "v1.2.0",
-    status: "Failed",
-    date: "2026-10-09",
-  },
-];
+function readJson(filePath, fallback = []) {
+  try {
+    if (!fs.existsSync(filePath)) {
+      fs.writeFileSync(filePath, JSON.stringify(fallback, null, 2));
+      return fallback;
+    }
 
-if (!fs.existsSync(deploymentsFile)) {
-  fs.writeFileSync(
-    deploymentsFile,
-    JSON.stringify(defaultDeployments, null, 2)
-  );
+    const content = fs.readFileSync(filePath, "utf8");
+    return content.trim() ? JSON.parse(content) : fallback;
+  } catch (error) {
+    console.error(`Error reading ${path.basename(filePath)}:`, error);
+    throw error;
+  }
 }
 
-function readDeployments() {
-  return JSON.parse(fs.readFileSync(deploymentsFile, "utf8"));
+function saveJson(filePath, data) {
+  fs.writeFileSync(filePath, JSON.stringify(data, null, 2), "utf8");
 }
 
-// Default alert data
-const defaultAlerts = [
-  {
-    id: "1",
-    title: "Database Connection Failed",
-    message: "Unable to connect to the database.",
-    severity: "Critical",
-    resolved: false,
-  },
-  {
-    id: "2",
-    title: "API Response Time",
-    message: "API response time is higher than expected.",
-    severity: "Warning",
-    resolved: false,
-  },
-  {
-    id: "3",
-    title: "Deployment Completed",
-    message: "Application deployed successfully.",
-    severity: "Info",
-    resolved: false,
-  },
-  {
-    id: "4",
-    title: "Memory Usage High",
-    message: "Memory usage is above the recommended level.",
-    severity: "Warning",
-    resolved: false,
-  },
-];
-
-if (!fs.existsSync(alertsFile)) {
-  fs.writeFileSync(
-    alertsFile,
-    JSON.stringify(defaultAlerts, null, 2)
-  );
-}
-
-function readAlerts() {
-  return JSON.parse(fs.readFileSync(alertsFile, "utf8"));
-}
-
-// Send JSON response
 function sendJson(res, statusCode, data) {
-  res.writeHead(statusCode);
+  res.writeHead(statusCode, {
+    "Content-Type": "application/json; charset=utf-8",
+    "Cache-Control": "no-store",
+  });
   res.end(JSON.stringify(data));
 }
 
-const server = http.createServer(async (req, res) => {
-  const url = new URL(
-    req.url,
-    `http://${req.headers.host || "localhost"}`
-  );
+function readRequestBody(req) {
+  return new Promise((resolve, reject) => {
+    let body = "";
 
-  // Common response headers
-  res.setHeader("Content-Type", "application/json");
-  res.setHeader("Access-Control-Allow-Origin", "*");
+    req.on("data", (chunk) => {
+      body += chunk;
+
+      if (body.length > 1_000_000) {
+        reject(new Error("Request body is too large"));
+        req.destroy();
+      }
+    });
+
+    req.on("end", () => {
+      if (!body.trim()) {
+        resolve({});
+        return;
+      }
+
+      try {
+        resolve(JSON.parse(body));
+      } catch {
+        reject(new Error("Invalid JSON request body"));
+      }
+    });
+
+    req.on("error", reject);
+  });
+}
+
+const server = http.createServer(async (req, res) => {
+  // CORS: allow the deployed frontend and local development.
+  const origin = req.headers.origin;
+
+  if (origin && allowedOrigins.includes(origin)) {
+    res.setHeader("Access-Control-Allow-Origin", origin);
+    res.setHeader("Vary", "Origin");
+  }
+
   res.setHeader(
     "Access-Control-Allow-Methods",
-    "GET, PATCH, OPTIONS"
+    "GET, PATCH, POST, OPTIONS"
   );
-  res.setHeader(
-    "Access-Control-Allow-Headers",
-    "Content-Type"
-  );
+  res.setHeader("Access-Control-Allow-Headers", "Content-Type");
+  res.setHeader("Cache-Control", "no-store");
 
-  // Handle browser preflight requests
+  // Browser sends OPTIONS before cross-origin PATCH requests.
   if (req.method === "OPTIONS") {
     res.writeHead(204);
     res.end();
     return;
   }
 
-  // 1. Backend health check
-  
-  if (req.method === "GET" && url.pathname === "/api/health") {
-    sendJson(res, 200, {
-      status: "OK",
-      message: "DeployFlow backend is running!",
-    });
-    return;
-  }
+  const url = new URL(req.url, `http://${req.headers.host || "localhost"}`);
+  const pathname = url.pathname;
 
-  // Real CPU and RAM metrics
-  if (req.method === "GET" && url.pathname === "/api/metrics") {
-    try {
-      const [cpu, memory] = await Promise.all([
-        si.currentLoad(),
-        si.mem(),
-      ]);
-
-      const memoryUsed = memory.total - memory.available;
-
-      const memoryUsage =
-        memory.total > 0
-          ? (memoryUsed / memory.total) * 100
-          : 0;
-
+  try {
+    // Health check
+    if (req.method === "GET" && pathname === "/api/health") {
       sendJson(res, 200, {
-        cpuUsage: Number(cpu.currentLoad.toFixed(1)),
-        memoryUsage: Number(memoryUsage.toFixed(1)),
-        memoryUsedGB: Number(
-          (memoryUsed / 1024 ** 3).toFixed(2)
-        ),
-        memoryTotalGB: Number(
-          (memory.total / 1024 ** 3).toFixed(2)
-        ),
-        timestamp: new Date().toISOString(),
+        status: "OK",
+        message: "DeployFlow backend is running",
       });
-    } catch (error) {
-      console.error("Metrics error:", error);
-
-      sendJson(res, 500, {
-        message: "Unable to collect system metrics",
-      });
+      return;
     }
 
-    return;
-  }
-
-
-  // 2. REAL CPU and RAM measurements
-  if (req.method === "GET" && url.pathname === "/api/metrics") {
-    try {
-      const [cpu, memory] = await Promise.all([
+    // System metrics
+    if (req.method === "GET" && pathname === "/api/metrics") {
+      const [load, memory, disks, uptime] = await Promise.all([
         si.currentLoad(),
         si.mem(),
+        si.fsSize(),
+        si.time(),
       ]);
 
-      const memoryUsed = memory.total - memory.available;
-
-      const memoryUsage =
-        memory.total > 0
-          ? (memoryUsed / memory.total) * 100
-          : 0;
+      const disk = disks.length > 0 ? disks[0] : null;
 
       sendJson(res, 200, {
-        cpuUsage: Number(cpu.currentLoad.toFixed(1)),
-        memoryUsage: Number(memoryUsage.toFixed(1)),
-        memoryUsedGB: Number(
-          (memoryUsed / 1024 ** 3).toFixed(2)
+        cpu: Number(load.currentLoad.toFixed(1)),
+        memory: Number(
+          ((memory.active / memory.total) * 100 || 0).toFixed(1)
         ),
-        memoryTotalGB: Number(
-          (memory.total / 1024 ** 3).toFixed(2)
-        ),
-        timestamp: new Date().toISOString(),
+        disk: disk ? Number(disk.use.toFixed(1)) : 0,
+        uptime: uptime.uptime,
       });
-    } catch (error) {
-      console.error("Metrics error:", error);
-
-      sendJson(res, 500, {
-        message: "Unable to collect system metrics",
-      });
+      return;
     }
 
-    return;
-  }
+    // Logs
+    if (req.method === "GET" && pathname === "/api/logs") {
+      sendJson(res, 200, [
+        {
+          id: "1",
+          level: "INFO",
+          message: "DeployFlow monitoring service is running",
+          timestamp: new Date().toISOString(),
+        },
+      ]);
+      return;
+    }
 
-  // 3. Application logs
-  if (req.method === "GET" && url.pathname === "/api/logs") {
-    const logs = [
-      {
-        id: 1,
-        time: "10:30:12",
-        level: "INFO",
-        message: "Frontend application started successfully",
-      },
-      {
-        id: 2,
-        time: "10:31:05",
-        level: "WARN",
-        message: "API response time is higher than expected",
-      },
-      {
-        id: 3,
-        time: "10:32:18",
-        level: "ERROR",
-        message: "Database connection failed",
-      },
-      {
-        id: 4,
-        time: "10:33:42",
-        level: "INFO",
-        message: "Deployment completed successfully",
-      },
-      {
-        id: 5,
-        time: "10:34:10",
-        level: "ERROR",
-        message: "Health check returned an error",
-      },
-      {
-        id: 6,
-        time: "10:35:20",
-        level: "WARN",
-        message: "Memory usage is above the warning threshold",
-      },
-    ];
+    // Get alerts
+    if (req.method === "GET" && pathname === "/api/alerts") {
+      sendJson(res, 200, readJson(alertsFile));
+      return;
+    }
 
-    sendJson(res, 200, logs);
-    return;
-  }
+    // Get deployments
+    if (req.method === "GET" && pathname === "/api/deployments") {
+      sendJson(res, 200, readJson(deploymentsFile));
+      return;
+    }
 
-  // 4. Get alerts
-  if (req.method === "GET" && url.pathname === "/api/alerts") {
-    sendJson(res, 200, readAlerts());
-    return;
-  }
+    // Update deployment status
+    const deploymentMatch = pathname.match(
+      /^\/api\/deployments\/([^/]+)\/status$/
+    );
 
-  // 5. Get deployments
-  if (
-    req.method === "GET" &&
-    url.pathname === "/api/deployments"
-  ) {
-    sendJson(res, 200, readDeployments());
-    return;
-  }
-
-  // 6. Update deployment status
-  const deploymentMatch = url.pathname.match(
-    /^\/api\/deployments\/([^/]+)\/status$/
-  );
-
-  if (req.method === "PATCH" && deploymentMatch) {
-    const deploymentId = decodeURIComponent(deploymentMatch[1]);
-    let body = "";
-
-    req.on("data", (chunk) => {
-      body += chunk;
-    });
-
-    req.on("end", () => {
-      let data;
-
-      try {
-        data = JSON.parse(body);
-      } catch {
-        sendJson(res, 400, {
-          message: "Invalid JSON body",
-        });
-        return;
-      }
-
+    if (req.method === "PATCH" && deploymentMatch) {
+      const deploymentId = decodeURIComponent(deploymentMatch[1]);
+      const body = await readRequestBody(req);
       const allowedStatuses = ["Success", "Running", "Failed"];
 
-      if (!allowedStatuses.includes(data.status)) {
+      if (!allowedStatuses.includes(body.status)) {
         sendJson(res, 400, {
-          message: "Invalid deployment status",
+          message: "Invalid status. Use Success, Running, or Failed.",
         });
         return;
       }
 
-      const deployments = readDeployments();
-
-      const deployment = deployments.find(
-        (item) => String(item.id) === deploymentId
+      const deployments = readJson(deploymentsFile);
+      const index = deployments.findIndex(
+        (item) => String(item.id) === String(deploymentId)
       );
 
-      if (!deployment) {
+      if (index === -1) {
         sendJson(res, 404, {
           message: "Deployment not found",
         });
         return;
       }
 
-      deployment.status = data.status;
+      deployments[index] = {
+        ...deployments[index],
+        status: body.status,
+      };
 
-      fs.writeFileSync(
-        deploymentsFile,
-        JSON.stringify(deployments, null, 2)
-      );
+      saveJson(deploymentsFile, deployments);
 
       sendJson(res, 200, {
         message: "Deployment status updated successfully",
-        deployment,
-      });
-    });
-
-    return;
-  }
-
-  // 7. Resolve an alert
-  const resolveMatch = url.pathname.match(
-    /^\/api\/alerts\/([^/]+)\/resolve$/
-  );
-
-  if (req.method === "PATCH" && resolveMatch) {
-    const alertId = decodeURIComponent(resolveMatch[1]);
-    const alerts = readAlerts();
-
-    const alert = alerts.find(
-      (item) => String(item.id) === alertId
-    );
-
-    if (!alert) {
-      sendJson(res, 404, {
-        message: "Alert not found",
+        deployment: deployments[index],
       });
       return;
     }
 
-    alert.resolved = true;
-
-    fs.writeFileSync(
-      alertsFile,
-      JSON.stringify(alerts, null, 2)
+    // Resolve an alert
+    const alertMatch = pathname.match(
+      /^\/api\/alerts\/([^/]+)\/resolve$/
     );
 
-    sendJson(res, 200, {
-      message: "Alert resolved successfully",
-      alert,
-    });
-    return;
-  }
+    if (req.method === "PATCH" && alertMatch) {
+      const alertId = decodeURIComponent(alertMatch[1]);
+      const alerts = readJson(alertsFile);
 
-  // Unknown route
-  sendJson(res, 404, {
-    message: "Route not found",
-    requestedUrl: req.url,
-  });
+      const index = alerts.findIndex(
+        (item) => String(item.id) === String(alertId)
+      );
+
+      if (index === -1) {
+        sendJson(res, 404, {
+          message: "Alert not found",
+        });
+        return;
+      }
+
+      alerts[index] = {
+        ...alerts[index],
+        resolved: true,
+      };
+
+      saveJson(alertsFile, alerts);
+
+      sendJson(res, 200, {
+        message: "Alert resolved successfully",
+        alert: alerts[index],
+      });
+      return;
+    }
+
+    sendJson(res, 404, {
+      message: "API route not found",
+    });
+  } catch (error) {
+    console.error("API error:", error);
+
+    if (!res.headersSent) {
+      sendJson(res, 500, {
+        message: error.message || "Internal server error",
+      });
+    }
+  }
 });
 
-server.listen(PORT, () => {
-  console.log(`Backend running at http://localhost:${PORT}`);
+server.listen(PORT, "0.0.0.0", () => {
+  console.log(`DeployFlow backend running on port ${PORT}`);
 });

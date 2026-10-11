@@ -2474,3 +2474,164 @@ tbody tr:hover {
     margin-left: 45px;
   }
 }
+
+/* ==================================
+   DEPLOYFLOW - FINAL UI ENHANCEMENTS
+================================== */
+
+/* Better spacing and readability */
+.main-content {
+  width: calc(100% - 245px);
+  max-width: 1800px;
+  margin-left: 245px;
+  padding: 32px;
+}
+
+.topbar {
+  min-height: 70px;
+  gap: 20px;
+}
+
+.breadcrumb {
+  letter-spacing: 0.4px;
+}
+
+.topbar h1 {
+  font-size: clamp(22px, 2vw, 28px);
+}
+
+/* Smooth card appearance */
+.stat-card,
+.panel,
+.monitoring-dashboard,
+.logs-panel,
+.alerts-panel,
+.deployment-table-container,
+.pipeline-list {
+  box-shadow:
+    0 8px 24px rgba(0, 0, 0, 0.12),
+    inset 0 1px 0 rgba(255, 255, 255, 0.015);
+}
+
+/* Consistent rounded corners */
+.stat-card,
+.panel,
+.logs-panel,
+.alerts-panel {
+  border-radius: 15px;
+}
+
+/* Clearer metric numbers */
+.stat-card h2,
+.monitoring-value,
+.alert-summary-card strong {
+  font-variant-numeric: tabular-nums;
+  letter-spacing: -0.8px;
+}
+
+/* Better navigation */
+.menu-item {
+  min-height: 44px;
+  font-weight: 500;
+}
+
+.menu-item:focus-visible {
+  outline: 2px solid #a78bfa;
+  outline-offset: 2px;
+}
+
+/* Better table readability */
+th {
+  padding-top: 15px;
+  padding-bottom: 15px;
+}
+
+td {
+  padding-top: 16px;
+  padding-bottom: 16px;
+}
+
+/* Unified input styling */
+input,
+select,
+textarea {
+  max-width: 100%;
+}
+
+input:focus-visible,
+select:focus-visible,
+textarea:focus-visible {
+  outline: 2px solid #8b83ff;
+  outline-offset: 2px;
+}
+
+/* Responsive desktop and tablet */
+@media (min-width: 1600px) {
+  .main-content {
+    padding: 38px 42px;
+  }
+
+  .stats-grid {
+    gap: 20px;
+  }
+
+  .content-grid {
+    gap: 22px;
+  }
+}
+
+@media (max-width: 1050px) {
+  .main-content {
+    width: calc(100% - 205px);
+    margin-left: 205px;
+    padding: 24px 20px;
+  }
+}
+
+/* Mobile layout */
+@media (max-width: 620px) {
+  .main-content {
+    width: 100%;
+    margin-left: 0;
+    padding: 18px 13px;
+  }
+
+  .topbar {
+    min-height: 58px;
+  }
+
+  .stats-grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 10px;
+  }
+
+  .stat-card {
+    padding: 14px 11px;
+  }
+
+  .panel,
+  .logs-panel,
+  .alerts-panel {
+    padding: 15px;
+  }
+
+  .table-scroll,
+  .deployment-table-scroll {
+    max-width: 100%;
+    overflow-x: auto;
+  }
+}
+
+/* Respect reduced-motion settings */
+@media (prefers-reduced-motion: reduce) {
+  html {
+    scroll-behavior: auto;
+  }
+
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    transition-duration: 0.01ms !important;
+  }
+}
