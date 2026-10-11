@@ -24,7 +24,9 @@ function AlertsPanel() {
         setAlerts(data);
         setError("");
       } catch (err) {
-        setError("Backend connection failed. Please check the server.");
+        setError(
+          "Backend connection failed. Please check the server."
+        );
       } finally {
         setLoading(false);
       }
@@ -35,10 +37,6 @@ function AlertsPanel() {
 
   const activeAlerts = alerts.filter(
     (alert) => alert.resolved !== true
-  );
-
-  const resolvedAlerts = alerts.filter(
-    (alert) => alert.resolved === true
   );
 
   const filteredAlerts = alerts.filter((alert) => {
@@ -58,7 +56,11 @@ function AlertsPanel() {
       (selectedStatus === "Active" && alert.resolved !== true) ||
       (selectedStatus === "Resolved" && alert.resolved === true);
 
-    return matchesSearch && matchesSeverity && matchesStatus;
+    return (
+      matchesSearch &&
+      matchesSeverity &&
+      matchesStatus
+    );
   });
 
   async function resolveAlert(id) {
@@ -71,7 +73,9 @@ function AlertsPanel() {
       const data = await response.json();
 
       if (!response.ok) {
-        throw new Error(data.message || "Unable to resolve alert");
+        throw new Error(
+          data.message || "Unable to resolve alert"
+        );
       }
 
       setAlerts((previousAlerts) =>
@@ -107,18 +111,22 @@ function AlertsPanel() {
         <div className="alert-summary-card">
           <span>Critical</span>
           <strong>
-            {activeAlerts.filter(
-              (alert) => alert.severity === "Critical"
-            ).length}
+            {
+              activeAlerts.filter(
+                (alert) => alert.severity === "Critical"
+              ).length
+            }
           </strong>
         </div>
 
         <div className="alert-summary-card">
           <span>Warnings</span>
           <strong>
-            {activeAlerts.filter(
-              (alert) => alert.severity === "Warning"
-            ).length}
+            {
+              activeAlerts.filter(
+                (alert) => alert.severity === "Warning"
+              ).length
+            }
           </strong>
         </div>
       </div>
@@ -135,7 +143,9 @@ function AlertsPanel() {
         <select
           className="alerts-filter"
           value={selectedSeverity}
-          onChange={(event) => setSelectedSeverity(event.target.value)}
+          onChange={(event) =>
+            setSelectedSeverity(event.target.value)
+          }
         >
           <option value="All">All Severities</option>
           <option value="Critical">Critical</option>
@@ -146,7 +156,9 @@ function AlertsPanel() {
         <select
           className="alerts-filter"
           value={selectedStatus}
-          onChange={(event) => setSelectedStatus(event.target.value)}
+          onChange={(event) =>
+            setSelectedStatus(event.target.value)
+          }
         >
           <option value="Active">Active Alerts</option>
           <option value="Resolved">Resolved Alerts</option>
@@ -155,7 +167,9 @@ function AlertsPanel() {
       </div>
 
       {error && (
-        <p role="alert" className="alerts-empty">{error}</p>
+        <p role="alert" className="alerts-empty">
+          {error}
+        </p>
       )}
 
       {loading ? (
@@ -189,14 +203,20 @@ function AlertsPanel() {
                   </span>
 
                   <div className="alert-content">
-                    <strong>{alert.title || "System Alert"}</strong>
-                    <p>{alert.message || "No details available."}</p>
+                    <strong>
+                      {alert.title || "System Alert"}
+                    </strong>
+                    <p>
+                      {alert.message || "No details available."}
+                    </p>
                     <small>
                       {alert.resolved ? "Resolved" : "Active"}
                     </small>
                   </div>
 
-                  <span className="alert-severity">{severity}</span>
+                  <span className="alert-severity">
+                    {severity}
+                  </span>
 
                   {!alert.resolved && (
                     <button
