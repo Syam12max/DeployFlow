@@ -1,6 +1,8 @@
 
 import React, { useEffect, useState } from "react";
 
+const API_URL = "https://deployflow-ezbz.onrender.com";
+
 function MonitoringPanel() {
   const [health, setHealth] = useState("Checking...");
   const [cpuUsage, setCpuUsage] = useState(null);
@@ -18,9 +20,7 @@ function MonitoringPanel() {
 
     async function fetchMonitoringData() {
       try {
-        const response = await fetch(
-          "http://localhost:5000/api/metrics"
-        );
+        const response = await fetch(`${API_URL}/api/metrics`);
 
         if (!response.ok) {
           throw new Error("Metrics request failed");
@@ -48,9 +48,7 @@ function MonitoringPanel() {
 
     async function checkBackendHealth() {
       try {
-        const response = await fetch(
-          "http://localhost:5000/api/health"
-        );
+        const response = await fetch(`${API_URL}/api/health`);
         const data = await response.json();
 
         if (!active) return;
@@ -61,7 +59,9 @@ function MonitoringPanel() {
             : "Degraded"
         );
       } catch {
-        if (active) setHealth("Down");
+        if (active) {
+          setHealth("Down");
+        }
       }
     }
 
@@ -105,7 +105,11 @@ function MonitoringPanel() {
           <p>Real-time performance and backend health</p>
         </div>
 
-        <div className={`monitoring-connection ${metricsError ? "connection-error" : ""}`}>
+        <div
+          className={`monitoring-connection ${
+            metricsError ? "connection-error" : ""
+          }`}
+        >
           <span className="monitoring-live-dot"></span>
           {metricsError ? "Connection issue" : "Auto refresh · 5 sec"}
         </div>
@@ -152,7 +156,9 @@ function MonitoringPanel() {
 
           <div className="monitoring-progress-track">
             <div
-              className={`monitoring-progress-fill cpu-progress ${getUsageClass(cpu)}`}
+              className={`monitoring-progress-fill cpu-progress ${getUsageClass(
+                cpu
+              )}`}
               style={{
                 width: `${Math.min(100, Math.max(0, cpu))}%`,
               }}
@@ -161,7 +167,9 @@ function MonitoringPanel() {
 
           <div className="monitoring-card-footer">
             <span>Current utilization</span>
-            <span>{cpu >= 85 ? "High" : cpu >= 65 ? "Moderate" : "Normal"}</span>
+            <span>
+              {cpu >= 85 ? "High" : cpu >= 65 ? "Moderate" : "Normal"}
+            </span>
           </div>
         </div>
 
@@ -182,7 +190,9 @@ function MonitoringPanel() {
 
           <div className="monitoring-progress-track">
             <div
-              className={`monitoring-progress-fill ram-progress ${getUsageClass(memory)}`}
+              className={`monitoring-progress-fill ram-progress ${getUsageClass(
+                memory
+              )}`}
               style={{
                 width: `${Math.min(100, Math.max(0, memory))}%`,
               }}

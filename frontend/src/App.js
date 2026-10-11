@@ -11,65 +11,85 @@ import LogsPanel from "./components/LogsPanel";
 import AlertsPanel from "./components/AlertsPanel";
 import DeploymentChart from "./components/DeploymentChart";
 
+const API_URL = "https://deployflow-ezbz.onrender.com";
+
 function App() {
   const [activePage, setActivePage] = useState(
     localStorage.getItem("deployflow-active-page") || "Dashboard"
   );
 
   const [deployments, setDeployments] = useState([]);
-  
-const [lastUpdated, setLastUpdated] = useState("");
-
+  const [lastUpdated, setLastUpdated] = useState("");
   const [alerts, setAlerts] = useState([]);
 
-  // Fetch deployment data from backend
-  
-useEffect(() => {
-  const fetchDeployments = () => {
-    fetch("http://localhost:5000/api/deployments")
-      .then((response) => {
+  // Save selected page
+  useEffect(() => {
+    localStorage.setItem("deployflow-active-page", activePage);
+  }, [activePage]);
+
+  // Fetch deployments every 5 seconds
+  useEffect(() => {
+    let active = true;
+
+    const fetchDeployments = async () => {
+      try {
+        const response = await fetch(`${API_URL}/api/deployments`);
+
         if (!response.ok) {
           throw new Error("Failed to fetch deployments");
         }
-        return response.json();
-      })
-      
-.then((data) => {
-  setDeployments(data);
-  setLastUpdated(new Date().toLocaleTimeString());
-})
 
-      .catch((error) => {
+        const data = await response.json();
+
+        if (!active) return;
+
+        setDeployments(data);
+        setLastUpdated(new Date().toLocaleTimeString());
+      } catch (error) {
         console.error("Deployments API error:", error);
-      });
-  };
+      }
+    };
 
-  // First time immediately fetch chesthundhi
-  fetchDeployments();
+    fetchDeployments();
 
-  // Prathi 5 seconds ki refresh avuthundhi
-  const intervalId = setInterval(fetchDeployments, 5000);
+    const intervalId = setInterval(fetchDeployments, 5000);
 
-  // Component close ayinappudu timer cleanup
-  return () => clearInterval(intervalId);
-}, []);
+    return () => {
+      active = false;
+      clearInterval(intervalId);
+    };
+  }, []);
 
-
-  // Fetch alerts from backend
+  // Fetch alerts every 5 seconds
   useEffect(() => {
-    fetch("http://localhost:5000/api/alerts")
-      .then((response) => {
+    let active = true;
+
+    const fetchAlerts = async () => {
+      try {
+        const response = await fetch(`${API_URL}/api/alerts`);
+
         if (!response.ok) {
           throw new Error("Failed to fetch alerts");
         }
-        return response.json();
-      })
-      .then((data) => {
-        setAlerts(data);
-      })
-      .catch((error) => {
+
+        const data = await response.json();
+
+        if (active) {
+          setAlerts(data);
+        }
+      } catch (error) {
         console.error("Alerts API error:", error);
-      });
+      }
+    };
+
+    fetchAlerts();
+
+    const intervalId = setInterval(fetchAlerts, 5000);
+
+    return () => {
+      active = false;
+      clearInterval(intervalId);
+    };
   }, []);
 
   const pipelines = [
@@ -212,7 +232,9 @@ useEffect(() => {
 
               <MonitoringPanel />
             </section>
+
             <DeploymentChart deployments={deployments} />
+
             <DeploymentTable
               deployments={deployments}
               onViewAll={() => setActivePage("Deployments")}
@@ -234,13 +256,12 @@ useEffect(() => {
           <div>
             <p className="breadcrumb">Workspace / Overview</p>
             <h1>{activePage}</h1>
-            
-{activePage === "Dashboard" && (
-  <p className="last-updated">
-    🕒 Last updated: {lastUpdated || "Loading..."}
-  </p>
-)}
 
+            {activePage === "Dashboard" && (
+              <p className="last-updated">
+                🕒 Last updated: {lastUpdated || "Loading..."}
+              </p>
+            )}
           </div>
 
           <div className="user-profile">

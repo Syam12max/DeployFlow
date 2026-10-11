@@ -1,11 +1,12 @@
 
 import React, { useEffect, useState } from "react";
 
+const API_URL = "https://deployflow-ezbz.onrender.com";
+
 function LogsPanel() {
   const [logs, setLogs] = useState([]);
   const [searchText, setSearchText] = useState("");
 
-  // Previously selected filter ni restore cheyyadam
   const [selectedLevel, setSelectedLevel] = useState(() => {
     return localStorage.getItem("deployflow-log-level") || "ALL";
   });
@@ -13,31 +14,52 @@ function LogsPanel() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
 
-  // Backend nunchi logs fetch cheyyadam
+  // Fetch logs and refresh every 5 seconds
   useEffect(() => {
-    fetch("http://localhost:5000/api/logs")
-      .then((response) => {
+    let active = true;
+
+    async function fetchLogs() {
+      try {
+        const response = await fetch(`${API_URL}/api/logs`);
+
         if (!response.ok) {
           throw new Error("Failed to fetch logs");
         }
 
-        return response.json();
-      })
-      .then((data) => {
+        const data = await response.json();
+
+        if (!Array.isArray(data)) {
+          throw new Error("Invalid logs response");
+        }
+
+        if (!active) return;
+
         setLogs(data);
         setError("");
-      })
-      .catch(() => {
+      } catch (err) {
+        if (!active) return;
+
         setError(
-          "Unable to load logs. Check whether the backend is running."
+          "Unable to load logs. Check the backend connection."
         );
-      })
-      .finally(() => {
-        setLoading(false);
-      });
+        console.error("Logs API error:", err);
+      } finally {
+        if (active) {
+          setLoading(false);
+        }
+      }
+    }
+
+    fetchLogs();
+
+    const intervalId = setInterval(fetchLogs, 5000);
+
+    return () => {
+      active = false;
+      clearInterval(intervalId);
+    };
   }, []);
 
-  // Filter change ayinappudu save cheyyadam
   function handleLevelChange(event) {
     const level = event.target.value;
 
@@ -45,14 +67,14 @@ function LogsPanel() {
     localStorage.setItem("deployflow-log-level", level);
   }
 
-  // Search and level filter
   const filteredLogs = logs.filter((log) => {
     const message = (log.message || "").toLowerCase();
     const time = String(log.time || "");
+    const search = searchText.toLowerCase();
 
     const matchesSearch =
-      message.includes(searchText.toLowerCase()) ||
-      time.includes(searchText);
+      message.toLowerCase().includes(search) ||
+      time.toLowerCase().includes(search);
 
     const matchesLevel =
       selectedLevel === "ALL" || log.level === selectedLevel;
@@ -81,7 +103,7 @@ function LogsPanel() {
           <p>Monitor application events and errors</p>
         </div>
 
-        <span className="live-badge">LIVE API</span>
+        <span className="live-badge">LIVE API · 5 SEC</span>
       </div>
 
       <div className="logs-controls">
@@ -107,21 +129,18 @@ function LogsPanel() {
         <span>Total Logs: {filteredLogs.length}</span>
 
         <span>
-          Errors: {
-            filteredLogs.filter((log) => log.level === "ERROR").length
-          }
+          Errors:{" "}
+          {filteredLogs.filter((log) => log.level === "ERROR").length}
         </span>
 
         <span>
-          Warnings: {
-            filteredLogs.filter((log) => log.level === "WARN").length
-          }
+          Warnings:{" "}
+          {filteredLogs.filter((log) => log.level === "WARN").length}
         </span>
 
         <span>
-          Info: {
-            filteredLogs.filter((log) => log.level === "INFO").length
-          }
+          Info:{" "}
+          {filteredLogs.filter((log) => log.level === "INFO").length}
         </span>
       </div>
 
@@ -145,9 +164,7 @@ function LogsPanel() {
                   {log.level}
                 </span>
 
-                <span className="log-message">
-                  {log.message}
-                </span>
+                <span className="log-message">{log.message}</span>
               </div>
             ))
           )}
