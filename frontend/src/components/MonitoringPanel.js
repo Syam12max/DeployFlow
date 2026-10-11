@@ -7,8 +7,8 @@ function MonitoringPanel() {
   const [health, setHealth] = useState("Checking...");
   const [cpuUsage, setCpuUsage] = useState(null);
   const [memoryUsage, setMemoryUsage] = useState(null);
-  const [memoryUsedGB, setMemoryUsedGB] = useState(null);
-  const [memoryTotalGB, setMemoryTotalGB] = useState(null);
+  const [diskUsage, setDiskUsage] = useState(null);
+  const [uptime, setUptime] = useState(null);
   const [backendMessage, setBackendMessage] = useState(
     "Connecting to backend..."
   );
@@ -30,10 +30,11 @@ function MonitoringPanel() {
 
         if (!active) return;
 
-        setCpuUsage(data.cpuUsage);
-        setMemoryUsage(data.memoryUsage);
-        setMemoryUsedGB(data.memoryUsedGB);
-        setMemoryTotalGB(data.memoryTotalGB);
+        setCpuUsage(data.cpu ?? null);
+        setMemoryUsage(data.memory ?? null);
+        setDiskUsage(data.disk ?? null);
+        setUptime(data.uptime ?? null);
+
         setBackendMessage("Live metrics connected");
         setLastUpdated(new Date().toLocaleTimeString());
         setMetricsError(false);
@@ -80,6 +81,7 @@ function MonitoringPanel() {
 
   const cpu = Number(cpuUsage) || 0;
   const memory = Number(memoryUsage) || 0;
+  const disk = Number(diskUsage) || 0;
 
   const getHealthClass = () => {
     if (health === "Healthy") return "healthy";
@@ -111,7 +113,9 @@ function MonitoringPanel() {
           }`}
         >
           <span className="monitoring-live-dot"></span>
-          {metricsError ? "Connection issue" : "Auto refresh · 5 sec"}
+          {metricsError
+            ? "Connection issue"
+            : "Auto refresh · 5 sec"}
         </div>
       </div>
 
@@ -132,24 +136,29 @@ function MonitoringPanel() {
           </p>
         </div>
 
-        <span className={`monitoring-status-pill ${getHealthClass()}`}>
+        <span
+          className={`monitoring-status-pill ${getHealthClass()}`}
+        >
           <span className="monitoring-status-dot"></span>
           {health}
         </span>
       </div>
 
       <div className="monitoring-metrics-grid">
+        {/* CPU CARD */}
         <div className="monitoring-metric-card">
           <div className="monitoring-card-heading">
             <div className="monitoring-metric-icon cpu-icon">
               CPU
             </div>
-            <span className="monitoring-card-label">Processor</span>
+            <span className="monitoring-card-label">
+              Processor
+            </span>
           </div>
 
           <div className="monitoring-value-row">
             <strong className="monitoring-value">
-              {cpuUsage === null ? "--" : `${cpu}%`}
+              {cpuUsage === null ? "--" : `${cpu.toFixed(1)}%`}
             </strong>
             <span className="monitoring-unit">Usage</span>
           </div>
@@ -168,22 +177,31 @@ function MonitoringPanel() {
           <div className="monitoring-card-footer">
             <span>Current utilization</span>
             <span>
-              {cpu >= 85 ? "High" : cpu >= 65 ? "Moderate" : "Normal"}
+              {cpu >= 85
+                ? "High"
+                : cpu >= 65
+                ? "Moderate"
+                : "Normal"}
             </span>
           </div>
         </div>
 
+        {/* RAM CARD */}
         <div className="monitoring-metric-card">
           <div className="monitoring-card-heading">
             <div className="monitoring-metric-icon ram-icon">
               RAM
             </div>
-            <span className="monitoring-card-label">Memory</span>
+            <span className="monitoring-card-label">
+              Memory
+            </span>
           </div>
 
           <div className="monitoring-value-row">
             <strong className="monitoring-value">
-              {memoryUsage === null ? "--" : `${memory}%`}
+              {memoryUsage === null
+                ? "--"
+                : `${memory.toFixed(1)}%`}
             </strong>
             <span className="monitoring-unit">Used</span>
           </div>
@@ -201,10 +219,14 @@ function MonitoringPanel() {
 
           <div className="monitoring-card-footer">
             <span>
-              {memoryUsedGB === null ? "--" : memoryUsedGB} GB used
+              Disk: {diskUsage === null ? "--" : `${disk.toFixed(1)}%`}
             </span>
             <span>
-              {memoryTotalGB === null ? "--" : memoryTotalGB} GB total
+              {uptime === null
+                ? "Uptime: --"
+                : `Uptime: ${Math.floor(uptime / 3600)}h ${Math.floor(
+                    (uptime % 3600) / 60
+                  )}m`}
             </span>
           </div>
         </div>
@@ -221,7 +243,9 @@ function MonitoringPanel() {
 
         <div className="monitoring-updated">
           <span>Last updated</span>
-          <strong>{lastUpdated || "Waiting for metrics..."}</strong>
+          <strong>
+            {lastUpdated || "Waiting for metrics..."}
+          </strong>
         </div>
       </div>
     </section>
