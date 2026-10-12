@@ -1,5 +1,7 @@
 # 🚀 DeployFlow
+[![Frontend](https://img.shields.io/badge/Frontend-Vercel-blue)](https://deploy-flow-puce.vercel.app)
 
+[![Backend](https://img.shields.io/badge/Backend-Render-purple)](https://deployflow-ezbz.onrender.com)
 ### Automated Deployment & Application Monitoring Platform
 
 DeployFlow is a web-based platform designed to monitor application health, view logs, track alerts, and manage deployment status through a simple dashboard.
