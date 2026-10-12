@@ -1,4 +1,5 @@
 # 🚀 DeployFlow
+![DeployFlow CI](https://github.com/Syam12max/DeployFlow/actions/workflows/ci.yml/badge.svg)
 [![Frontend](https://img.shields.io/badge/Frontend-Vercel-blue)](https://deploy-flow-puce.vercel.app)
 
 [![Backend](https://img.shields.io/badge/Backend-Render-purple)](https://deployflow-ezbz.onrender.com)
