@@ -8,7 +8,17 @@ DeployFlow is a web-based platform designed to monitor application health, view 
 
 - **Frontend:** https://deploy-flow-puce.vercel.app
 - **Backend API:** https://deployflow-ezbz.onrender.com
+## 📸 Dashboard Preview
 
+DeployFlow provides a centralized dashboard to monitor deployments, CI/CD pipelines, application health, and active alerts.
+
+### Dashboard Features
+
+- 📊 Deployment statistics
+- 🚀 CI/CD pipeline status
+- 🖥️ Application monitoring
+- 📝 Logs and alert management
+- ⚡ Response-time overview
 ## ✨ Features
 
 - 📊 Application health and system monitoring
