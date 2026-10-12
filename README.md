@@ -79,6 +79,8 @@ cd DeployFlow
 
 ### 2. Start the backend
 
+Open a terminal:
+
 ```bash
 cd backend
 npm install
@@ -87,7 +89,7 @@ node server.js
 
 ### 3. Start the frontend
 
-Open a new terminal:
+Open a **new terminal**:
 
 ```bash
 cd frontend
@@ -95,14 +97,5 @@ npm install
 npm start
 ```
 
-If the frontend uses Vite, run `npm run dev` instead of `npm start`.
+If your frontend uses Vite, use `npm run dev` instead of `npm start`.
 
-## 🎯 Project Objective
-
-The objective of DeployFlow is to provide a simple dashboard for application monitoring, log tracking, alert management, and deployment visibility.
-
-## 👨‍💻 Author
-
-**Syam12max**
-
-GitHub: https://github.com/Syam12max
