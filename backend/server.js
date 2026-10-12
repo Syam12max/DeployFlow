@@ -8,6 +8,7 @@ const PORT = process.env.PORT || 5000;
 
 const allowedOrigins = [
   "https://deploy-flow-puce.vercel.app",
+  "https://deployflow-dashboard.netlify.app",
   "http://localhost:3000",
   "http://localhost:5173",
 ];
